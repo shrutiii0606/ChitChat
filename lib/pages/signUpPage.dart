@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/UIhelper.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -22,9 +23,11 @@ class _SignUpPageState extends State<SignUpPage> {
     String password = passwordController.text.trim();
     String cpassword = cpasswordController.text.trim();
     if (email == "" || password == "" || cpassword == "") {
-      print("please fill all the fields");
+      UIhelper.showAlertDialog(
+          context, "Incomplete Data", "Please fill all the fields");
     } else if (password != cpassword) {
-      print("Passwords don not match");
+      UIhelper.showAlertDialog(
+          context, "Password Mismatch", "Passwords you entered don not match");
     } else {
       signUp(email, password);
     }
@@ -32,11 +35,17 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void signUp(String email, String password) async {
     UserCredential? credential;
+
+    UIhelper.showLoadingDialog(context, "Creating new account...");
+
     try {
       credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
     } on FirebaseAuthException catch (ex) {
-      print(ex.code.toString());
+      Navigator.pop(context);
+
+      UIhelper.showAlertDialog(
+          context, "An error occured", ex.message.toString());
     }
     if (credential != null) {
       String uid = credential.user!.uid;
@@ -52,7 +61,9 @@ class _SignUpPageState extends State<SignUpPage> {
           .set(newuser.toMap())
           .then((value) {
         print("new user created");
-        Navigator.push(context, MaterialPageRoute(builder: (context) {
+        Navigator.popUntil(context, (route) => route.isFirst);
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) {
           return CompleteProfile(
               usermodel: newuser, firebaseUser: credential!.user!);
         }));

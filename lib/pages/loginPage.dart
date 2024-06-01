@@ -1,3 +1,4 @@
+import 'package:chitchat/models/UIhelper.dart';
 import 'package:chitchat/models/UserModel.dart';
 import 'package:chitchat/pages/signUpPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,7 +22,8 @@ class _LoginPageState extends State<LoginPage> {
     String email = emailcontroller.text.trim();
     String password = passwordcontroller.text.trim();
     if (email == '' || password == '') {
-      print("Please Fill all the details");
+      UIhelper.showAlertDialog(
+          context, "Incomplete Data", "Please fill all the fields");
     } else {
       login(email, password);
     }
@@ -29,22 +31,32 @@ class _LoginPageState extends State<LoginPage> {
 
   void login(String email, String password) async {
     UserCredential? credential;
+
+    UIhelper.showLoadingDialog(context, "Logging In...");
+
     try {
       credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
     } on FirebaseAuthException catch (ex) {
-      print(ex.message.toString());
+      //close loading dialog
+      Navigator.pop(context);
+
+      //show alert dialog
+      UIhelper.showAlertDialog(
+          context, "An error occured", ex.message.toString());
     }
     if (credential != null) {
       String uid = credential.user!.uid;
 
       DocumentSnapshot userData =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
       UserModel userModel =
           UserModel.fromMap(userData.data() as Map<String, dynamic>);
-      print("hello");
-      if (!context.mounted) return;
-      Navigator.push(context, MaterialPageRoute(builder: (context) {
+      if (!mounted) return;
+
+      Navigator.popUntil(context, (route) => route.isFirst);
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) {
         return HomePage(userModel: userModel, firebaseUser: credential!.user!);
       }));
     }
